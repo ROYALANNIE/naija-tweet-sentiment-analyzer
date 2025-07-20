@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇳🇬 Naija Tweet Sentiment Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2E8B57 0%, #228B22 100%);
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255,255,255,0.05) 10px,
+                rgba(255,255,255,0.05) 20px
+            );
+            animation: shimmer 20s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-50%) translateY(-50%) rotate(0deg); }
+            100% { transform: translateX(-50%) translateY(-50%) rotate(360deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .input-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+
+        .input-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #2E8B57;
+            box-shadow: 0 0 0 3px rgba(46, 139, 87, 0.1);
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-label {
+            display: block;
+            padding: 20px;
+            border: 3px dashed #2E8B57;
+            border-radius: 15px;
+            text-align: center;
+            color: #2E8B57;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+        }
+
+        .file-label:hover {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d8edd8 100%);
+            transform: translateY(-2px);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2E8B57 0%, #228B22 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(46, 139, 87, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-left: 10px;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .results {
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #2E8B57;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .tweet-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .tweet-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .tweet-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .tweet-item.positive {
+            border-left-color: #28a745;
+        }
+
+        .tweet-item.negative {
+            border-left-color: #dc3545;
+        }
+
+        .tweet-item.neutral {
+            border-left-color: #6c757d;
+        }
+
+        .sentiment-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .sentiment-badge.positive {
+            background: #28a745;
+        }
+
+        .sentiment-badge.negative {
+            background: #dc3545;
+        }
+
+        .sentiment-badge.neutral {
+            background: #6c757d;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2E8B57;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .demo-data {
+            background: #e8f5e8;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 4px solid #2E8B57;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .input-section {
+                padding: 20px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇳🇬 Naija Tweet Sentiment Analyzer</h1>
+            <p>Discover public sentiment in Nigerian tweets using AI-powered analysis</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <h2 style="margin-bottom: 20px; color: #333;">Analyze Tweet Sentiment</h2>
+                
+                <div class="input-group">
+                    <label for="singleTweet">📝 Analyze Single Tweet:</label>
+                    <textarea id="singleTweet" rows="3" placeholder="Enter a tweet to analyze its sentiment..."></textarea>
+                    <button class="btn" onclick="analyzeSingleTweet()">Analyze Tweet</button>
+                </div>
+
+                <div style="text-align: center; margin: 20px 0; color: #666; font-weight: 600;">OR</div>
+
+                <div class="input-group">
+                    <label for="csvFile">📤 Upload CSV File (with 'text' column):</label>
+                    <div class="file-upload">
+                        <input type="file" id="csvFile" class="file-input" accept=".csv" onchange="handleFileUpload(event)">
+                        <label for="csvFile" class="file-label">
+                            📁 Click to upload CSV file or drag and drop
+                            <br><small>File should contain a 'text' column with tweets</small>
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary" onclick="loadDemoData()">🎯 Load Demo Data</button>
+            </div>
+
+            <div class="demo-data">
+                <h4>💡 Demo Instructions:</h4>
+                <p>Try the demo by:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Typing a single tweet in the text area above</li>
+                    <li>Clicking "Load Demo Data" to see sample Nigerian tweets analysis</li>
+                    <li>Uploading your own CSV file with a 'text' column containing tweets</li>
+                </ul>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing sentiment...</p>
+            </div>
+
+            <div class="results" id="results">
+                <h2 style="margin-bottom: 30px; color: #333;">📊 Analysis Results</h2>
+
+                <div class="stats" id="stats"></div>
+
+                <div class="chart-container">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+
+                <div class="result-card">
+                    <h3 style="margin-bottom: 15px;">🔍 Analyzed Tweets</h3>
+                    <div class="tweet-list" id="tweetList"></div>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn" onclick="downloadResults()">📥 Download Results CSV</button>
+                    <button class="btn btn-secondary" onclick="resetAnalysis()">🔄 New Analysis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analysisResults = [];
+        let sentimentChart = null;
+
+        // Simple sentiment analysis function (mimicking TextBlob behavior)
+        function getSentiment(text) {
+            const positiveWords = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'awesome', 'love', 'happy', 'joy', 'success', 'win', 'best', 'beautiful', 'perfect', 'brilliant', 'outstanding', 'superb', 'marvelous', 'delighted', 'pleased', 'satisfied', 'grateful', 'thankful', 'blessed', 'lucky', 'fortunate', 'proud', 'excited', 'thrilled', 'optimistic', 'hopeful', 'confident', 'positive', 'pleasant', 'nice', 'cool', 'fine', 'well', 'better', 'improved'];
+            
+            const negativeWords = ['bad', 'terrible', 'awful', 'horrible', 'disgusting', 'hate', 'angry', 'sad', 'disappointed', 'frustrated', 'annoyed', 'upset', 'worried', 'concerned', 'scared', 'afraid', 'nervous', 'anxious', 'depressed', 'unhappy', 'miserable', 'devastated', 'heartbroken', 'furious', 'outraged', 'disgusted', 'appalled', 'shocked', 'disturbed', 'troubled', 'bothered', 'irritated', 'agitated', 'stressed', 'overwhelmed', 'exhausted', 'tired', 'weak', 'sick', 'ill', 'pain', 'hurt', 'damaged', 'broken', 'failed', 'loss', 'lose', 'worst', 'ugly', 'stupid', 'dumb', 'foolish', 'ridiculous', 'absurd', 'nonsense', 'crazy', 'insane', 'mad', 'wild', 'chaos', 'disaster', 'crisis', 'problem', 'issue', 'trouble', 'difficulty', 'challenge', 'obstacle', 'barrier', 'setback', 'disappointment', 'rejection', 'failure', 'defeat', 'mistake', 'error', 'wrong', 'incorrect', 'false', 'lie', 'fraud', 'scam', 'cheat', 'steal', 'rob', 'crime', 'criminal', 'violence', 'war', 'fight', 'attack', 'assault', 'abuse', 'harm', 'danger', 'risk', 'threat', 'warning', 'alert', 'emergency', 'urgent', 'serious', 'severe', 'critical', 'fatal', 'deadly', 'toxic', 'poison', 'corrupt', 'evil', 'wicked', 'cruel', 'harsh', 'brutal', 'savage', 'vicious', 'malicious', 'spiteful', 'vindictive', 'jealous', 'envious', 'greedy', 'selfish', 'arrogant', 'rude', 'impolite', 'disrespectful'];
+
+            const words = text.toLowerCase().split(/\W+/);
+            let positiveCount = 0;
+            let negativeCount = 0;
+
+            words.forEach(word => {
+                if (positiveWords.includes(word)) {
+                    positiveCount++;
+                } else if (negativeWords.includes(word)) {
+                    negativeCount++;
+                }
+            });
+
+            if (positiveCount > negativeCount) {
+                return 'Positive';
+            } else if (negativeCount > positiveCount) {
+                return 'Negative';
+            } else {
+                return 'Neutral';
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function analyzeSingleTweet() {
+            const tweet = document.getElementById('singleTweet').value.trim();
+            if (!tweet) {
+                alert('Please enter a tweet to analyze!');
+                return;
+            }
+
+            showLoading();
+
+            setTimeout(() => {
+                const sentiment = getSentiment(tweet);
+                analysisResults = [{
+                    text: tweet,
+                    sentiment: sentiment
+                }];
+
+                displayResults();
+                hideLoading();
+            }, 1000);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.name.endsWith('.csv')) {
+                alert('Please upload a CSV file!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    
+                    const textColumnIndex = headers.findIndex(h => h.toLowerCase() === 'text');
+                    if (textColumnIndex === -1) {
+                        alert('CSV file must contain a "text" column!');
+                        return;
+                    }
+
+                    showLoading();
+
+                    setTimeout(() => {
+                        analysisResults = [];
+                        
+                        for (let i = 1; i < lines.length; i++) {
+                            const row = lines[i].split(',');
+                            if (row.length > textColumnIndex && row[textColumnIndex]) {
+                                const text = row[textColumnIndex].trim().replace(/"/g, '');
+                                if (text) {
+                                    const sentiment = getSentiment(text);
+                                    analysisResults.push({
+                                        text: text,
+                                        sentiment: sentiment
+                                    });
+                                }
+                            }
+                        }
+
+                        if (analysisResults.length === 0) {
+                            alert('No valid tweets found in the CSV file!');
+                            hideLoading();
+                            return;
+                        }
+
+                        displayResults();
+                        hideLoading();
+                    }, 2000);
+
+                } catch (error) {
+                    alert('Error parsing CSV file. Please make sure it\'s properly formatted.');
+                    hideLoading();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function loadDemoData() {
+            showLoading();
+
+            const demoTweets = [
+                "Lagos traffic is getting worse every day, when will government do something about this?",
+                "Just had the most amazing jollof rice at this new restaurant! Highly recommend!",
+                "Nigeria's tech industry is growing so fast, so proud of our innovation!",
+                "The fuel scarcity is really affecting small businesses badly",
+                "Congratulations to our Super Eagles on the victory! We are so proud!",
+                "The education system needs urgent reform, our children deserve better",
+                "Love the new Afrobeats album that just dropped, Nigerian music is taking over the world!",
+                "Power outage again today, this is really frustrating for productivity",
+                "The Nigerian film industry (Nollywood) is producing world-class content now",
+                "Youth unemployment is a serious challenge that needs immediate attention",
+                "Wonderful weather in Abuja today, perfect for outdoor activities!",
+                "Corruption is still a major problem affecting development in the country",
+                "Nigerian cuisine is simply the best in the world, nothing beats our local dishes!",
+                "Internet connectivity issues are hindering business growth in rural areas",
+                "So excited about the new tech hub opening in Lagos, more opportunities for youth!"
+            ];
+
+            setTimeout(() => {
+                analysisResults = demoTweets.map(tweet => ({
+                    text: tweet,
+                    sentiment: getSentiment(tweet)
+                }));
+
+                displayResults();
+                hideLoading();
+            }, 1500);
+        }
+
+        function displayResults() {
+            const sentimentCounts = {
+                'Positive': 0,
+                'Negative': 0,
+                'Neutral': 0
+            };
+
+            analysisResults.forEach(result => {
+                sentimentCounts[result.sentiment]++;
+            });
+
+            // Display stats
+            const statsDiv = document.getElementById('stats');
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #28a745;">${sentimentCounts.Positive}</div>
+                    <div class="stat-label">Positive Tweets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #dc3545;">${sentimentCounts.Negative}</div>
+                    <div class="stat-label">Negative Tweets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #6c757d;">${sentimentCounts.Neutral}</div>
+                    <div class="stat-label">Neutral Tweets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #333;">${analysisResults.length}</div>
+                    <div class="stat-label">Total Tweets</div>
+                </div>
+            `;
+
+            // Display chart
+            displayChart(sentimentCounts);
+
+            // Display tweet list
+            const tweetListDiv = document.getElementById('tweetList');
+            tweetListDiv.innerHTML = analysisResults.map((result, index) => `
+                <div class="tweet-item ${result.sentiment.toLowerCase()}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <div style="flex: 1;">
+                            <p style="margin-bottom: 8px; line-height: 1.4;">${result.text}</p>
+                        </div>
+                        <span class="sentiment-badge ${result.sentiment.toLowerCase()}">${result.sentiment}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function displayChart(sentimentCounts) {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            
+            if (sentimentChart) {
+                sentimentChart.destroy();
+            }
+
+            sentimentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Positive', 'Negative', 'Neutral'],
+                    datasets: [{
+                        data: [sentimentCounts.Positive, sentimentCounts.Negative, sentimentCounts.Neutral],
+                        backgroundColor: [
+                            '#28a745',
+                            '#dc3545',
+                            '#6c757d'
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Tweet Sentiment Distribution',
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            padding: 20
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        duration: 2000
+                    }
+                }
+            });
+        }
+
+        function downloadResults() {
+            if (analysisResults.length === 0) {
+                alert('No results to download!');
+                return;
+            }
+
+            const csv = 'text,sentiment\n' + analysisResults.map(result => 
+                `"${result.text.replace(/"/g, '""')}","${result.sentiment}"`
+            ).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'naija_tweet_sentiments.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function resetAnalysis() {
+            analysisResults = [];
+            document.getElementById('singleTweet').value = '';
+            document.getElementById('csvFile').value = '';
+            document.getElementById('results').style.display = 'none';
+            
+            if (sentimentChart) {
+                sentimentChart.destroy();
+                sentimentChart = null;
+            }
+        }
+
+        // File drag and drop functionality
+        const fileLabel = document.querySelector('.file-label');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            fileLabel.style.background = 'linear-gradient(135deg, #d8edd8 0%, #c8ddc8 100%)';
+        }
+
+        function unhighlight() {
+            fileLabel.style.background = 'linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%)';
+        }
+
+        fileLabel.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            document.getElementById('csvFile').files = files;
+            handleFileUpload({ target: { files: files } });
+        }
+    </script>
+</body>
+</html>
